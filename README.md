@@ -18,6 +18,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Environment variables
+
+The chat API requires the server-only `GEMINI_API_KEY`, `UPSTASH_REDIS_REST_URL`, and `UPSTASH_REDIS_REST_TOKEN` variables. Configure them in Vercel Project Settings > Environment Variables for the deployments that need chat, and use `.env.local` for local secrets. `.env.example` contains placeholders only; never commit real credentials or expose these variables with a `NEXT_PUBLIC_` prefix.
+
+The chat rate limiter only trusts Vercel's edge-provided client IP. Enable Vercel system environment variables so the route can verify `VERCEL=1`. Ordinary `next dev` without Vercel's trusted request metadata fails closed with HTTP 503; do not simulate the client IP with an arbitrary forwarding header.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
