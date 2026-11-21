@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AQIDataProvider } from "./providers/aqi-data-provider";
+import AppSidebar from "@/components/app-sidebar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +25,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AQIDataProvider>
+          <div className="min-h-screen bg-[#f7faf8] text-slate-800 dark:bg-slate-950 dark:text-slate-100">
+            <AppSidebar />
+            <div className="min-h-screen min-w-0 lg:ml-[260px]">{children}</div>
+          </div>
+        </AQIDataProvider>
+      </body>
     </html>
   );
 }
