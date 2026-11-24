@@ -347,10 +347,14 @@ export async function fetchAQIForecastForLocation(
       "PM10",
     );
 
-    const points: AQIForecastPoint[] = times.map((time, index) => {
+    const points: AQIForecastPoint[] = times.flatMap((time, index) => {
       const aqi = aqiValues[index];
       if (typeof time !== "string" || time.trim() === "") {
         throw new Error("Open-Meteo returned an invalid AQI forecast timestamp.");
+      }
+
+      if (aqi === null || aqi === undefined) {
+        return [];
       }
 
       if (!isValidMeasurement(aqi) || aqi > 500) {
@@ -359,13 +363,19 @@ export async function fetchAQIForecastForLocation(
 
       const pm25 = pm25Values?.[index];
       const pm10 = pm10Values?.[index];
-      return {
-        time,
-        aqi,
-        ...(isValidMeasurement(pm25) ? { pm2_5: pm25 } : {}),
-        ...(isValidMeasurement(pm10) ? { pm10 } : {}),
-      };
+      return [
+        {
+          time,
+          aqi,
+          ...(isValidMeasurement(pm25) ? { pm2_5: pm25 } : {}),
+          ...(isValidMeasurement(pm10) ? { pm10 } : {}),
+        },
+      ];
     });
+
+    if (points.length === 0) {
+      throw new Error("Open-Meteo returned no valid hourly US AQI forecast values.");
+    }
 
     return {
       locationName: location.locationName.trim(),

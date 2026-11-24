@@ -1,6 +1,7 @@
 {
   "name": "smogshield-ai",
   "version": "0.1.0",
+  "description": "An air-quality dashboard for Indian locations with model-based AQI estimates, five-day forecasts, health alerts, city comparisons, and a Gemini assistant.",
   "private": true,
   "scripts": {
     "dev": "next dev",
