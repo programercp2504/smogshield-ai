@@ -15,6 +15,44 @@ Air pollution varies by place and time, and an AQI number can be difficult to ac
 - **Insights** — Review forecast summaries such as trend, cleaner and more polluted days, and forecast peaks. These are calculated from the returned forecast points.
 - **Gemini AI Assistant** — Ask air-quality questions. The assistant can use the selected location and current AQI context when available, and can answer general questions when current data is unavailable.
 
+## Application Screenshots
+
+### AQI Dashboard
+
+View current air quality, available pollutant readings, and forecast details for the selected location.
+
+![SmogShield AI AQI dashboard](docs/screenshots/dashboard.png)
+
+### Five-day Forecast
+
+Explore upcoming AQI estimates and daily air-quality trends for the selected location.
+
+![SmogShield AI five-day forecast](docs/screenshots/forecast.png)
+
+### Health Alerts
+
+See general, AQI-based precautions for the selected location.
+
+![SmogShield AI health alerts](docs/screenshots/health-alerts.png)
+
+### City Comparison
+
+Compare current AQI readings between two Indian cities.
+
+![SmogShield AI city comparison](docs/screenshots/compare.png)
+
+### Air Quality Insights
+
+Review forecast trends, cleaner and more polluted days, and peak values.
+
+![SmogShield AI air quality insights](docs/screenshots/insights.png)
+
+### AI Assistant
+
+Ask questions about air quality with selected-location context when available.
+
+![SmogShield AI assistant](docs/screenshots/assistant.png)
+
 ## Technology
 
 - Next.js 16 App Router, React 19, and TypeScript
