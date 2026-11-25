@@ -8,6 +8,13 @@ import {
   fetchKolkataAQI,
   type AQILocation,
 } from "@/lib/aqi-api";
+import {
+  getGeminiApiErrorStatus,
+  getRetryAfterResponseHeaders,
+  isTransientGeminiStatus,
+  retryGeminiRequest,
+  type GeminiRetryAfterHeaders,
+} from "@/lib/gemini-retry";
 
 const MODEL = "gemini-3.5-flash-lite";
 const MAX_REQUEST_BODY_BYTES = 65_536;
@@ -511,37 +518,72 @@ export async function POST(request: Request): Promise<Response> {
   });
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    let retryAfterHeaders: GeminiRetryAfterHeaders | null = null;
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        retryOptions: { attempts: 1, httpStatusCodes: [] },
+        fetch: async (input, init) => {
+          const response = await fetch(input, init);
+          retryAfterHeaders = {
+            retryAfter: response.headers.get("retry-after"),
+            retryAfterMs: response.headers.get("retry-after-ms"),
+          };
+          return response;
+        },
+      },
+    });
     let reply: string | undefined;
 
     try {
-      const response = await ai.models.generateContent({
-        model: MODEL,
-        contents,
-        config: {
-          systemInstruction: addAQIContext(
-            SYSTEM_INSTRUCTION,
-            aqiReading,
-            validation.value.location,
-          ),
-          temperature: 0.7,
-          maxOutputTokens: 800,
+      const response = await retryGeminiRequest(
+        () => {
+          retryAfterHeaders = null;
+          return ai.models.generateContent({
+            model: MODEL,
+            contents,
+            config: {
+              systemInstruction: addAQIContext(
+                SYSTEM_INSTRUCTION,
+                aqiReading,
+                validation.value.location,
+              ),
+              temperature: 0.7,
+              maxOutputTokens: 800,
+            },
+          });
         },
-      });
+        { getRetryAfter: () => retryAfterHeaders },
+      );
       reply = response.text?.trim();
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error("Gemini chat request failed.", {
-          name: error.name,
-          message: error.message,
-        });
-      } else {
-        console.error("Gemini chat request failed.");
+    } catch (error: unknown) {
+      const status = getGeminiApiErrorStatus(error);
+      console.error("Gemini chat request failed.", {
+        status: status ?? "unknown",
+      });
+
+      if (status === 429) {
+        return jsonError(
+          429,
+          "GEMINI_RATE_LIMITED",
+          "The AI assistant is receiving too many requests right now. Please try again later.",
+          getRetryAfterResponseHeaders(retryAfterHeaders),
+        );
       }
+
+      if (isTransientGeminiStatus(status)) {
+        return jsonError(
+          503,
+          "AI_UNAVAILABLE",
+          "The AI assistant is temporarily unavailable. Please try again shortly.",
+          getRetryAfterResponseHeaders(retryAfterHeaders),
+        );
+      }
+
       return jsonError(
         502,
         "AI_PROVIDER_ERROR",
-        "The AI assistant is temporarily unavailable. Please try again later.",
+        "The AI assistant could not complete your request. Please try again later.",
       );
     }
 

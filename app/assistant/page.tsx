@@ -37,6 +37,38 @@ function isChatReply(value: unknown): value is { reply: string } {
   );
 }
 
+function getChatErrorCode(value: unknown): string | null {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("error" in value) ||
+    typeof value.error !== "object" ||
+    value.error === null ||
+    !("code" in value.error) ||
+    typeof value.error.code !== "string"
+  ) {
+    return null;
+  }
+
+  return value.error.code;
+}
+
+function getChatFailureMessage(code: string | null): string {
+  switch (code) {
+    case "AI_UNAVAILABLE":
+    case "RATE_LIMIT_UNAVAILABLE":
+      return "The AI service is temporarily unavailable. Please try again shortly.";
+    case "GEMINI_RATE_LIMITED":
+      return "The AI service has reached its request limit. Please wait before trying again.";
+    case "RATE_LIMITED":
+      return "You have sent messages too quickly. Please wait before trying again.";
+    case "AI_NOT_CONFIGURED":
+      return "The AI assistant is not configured in this environment.";
+    default:
+      return "The assistant could not complete your request. Please try again.";
+  }
+}
+
 function getHistory(messages: ChatMessage[]) {
   const recentMessages: Array<Pick<ChatMessage, "role" | "content">> = [];
   let totalCharacters = 0;
@@ -365,8 +397,16 @@ export default function AssistantPage() {
       });
       const result: unknown = await response.json();
 
-      if (!response.ok || !isChatReply(result)) {
-        throw new Error("The assistant returned an invalid response.");
+      if (!response.ok) {
+        setRequestError(getChatFailureMessage(getChatErrorCode(result)));
+        return;
+      }
+
+      if (!isChatReply(result)) {
+        setRequestError(
+          "The assistant returned an invalid response. Please try again.",
+        );
+        return;
       }
 
       setMessages((currentMessages) => [
@@ -384,7 +424,7 @@ export default function AssistantPage() {
       ]);
     } catch {
       setRequestError(
-        "Sorry, I couldn’t get a response right now. Please try again in a moment.",
+        "We couldn’t reach the assistant. Check your connection and try again.",
       );
     } finally {
       requestInProgress.current = false;

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   fetchAQIForLocation: vi.fn(),
   fetchKolkataAQI: vi.fn(),
   generateContent: vi.fn(),
+  googleGenAIOptions: vi.fn(),
   limiterConfig: vi.fn(),
   rateLimit: vi.fn(),
   redisFromEnv: vi.fn(),
@@ -29,6 +30,10 @@ vi.mock("@upstash/redis", () => ({
 vi.mock("@google/genai", () => ({
   GoogleGenAI: class {
     models = { generateContent: mocks.generateContent };
+
+    constructor(options: unknown) {
+      mocks.googleGenAIOptions(options);
+    }
   },
 }));
 
@@ -95,6 +100,13 @@ function rawBodyRequest(
   });
 }
 
+function geminiApiError(status: number) {
+  return Object.assign(new Error("sensitive provider details"), {
+    name: "ApiError",
+    status,
+  });
+}
+
 describe("POST /api/chat", () => {
   beforeEach(() => {
     vi.stubEnv("VERCEL", "1");
@@ -105,6 +117,7 @@ describe("POST /api/chat", () => {
     mocks.fetchAQIForLocation.mockReset();
     mocks.fetchKolkataAQI.mockReset();
     mocks.generateContent.mockReset();
+    mocks.googleGenAIOptions.mockReset();
     mocks.limiterConfig.mockReset();
     mocks.rateLimit.mockReset();
     mocks.redisFromEnv.mockReset();
@@ -276,6 +289,72 @@ describe("POST /api/chat", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ reply: "Air quality information." });
     expect(mocks.generateContent).toHaveBeenCalledOnce();
+    expect(mocks.googleGenAIOptions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        httpOptions: expect.objectContaining({
+          fetch: expect.any(Function),
+          retryOptions: { attempts: 1, httpStatusCodes: [] },
+        }),
+      }),
+    );
     expect(response.headers.get("ratelimit-limit")).toBe("10");
+  });
+
+  it("retries Gemini 503 and returns a successful response", async () => {
+    mocks.generateContent
+      .mockRejectedValueOnce(geminiApiError(503))
+      .mockResolvedValueOnce({ text: "Air quality information." });
+
+    const response = await POST(chatRequest());
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      reply: "Air quality information.",
+    });
+    expect(mocks.generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns a safe temporary-unavailability response after three attempts", async () => {
+    mocks.generateContent.mockRejectedValue(geminiApiError(503));
+
+    const response = await POST(chatRequest());
+    const responseBody = await response.text();
+
+    expect(response.status).toBe(503);
+    expect(mocks.generateContent).toHaveBeenCalledTimes(3);
+    expect(responseBody).toContain('"code":"AI_UNAVAILABLE"');
+    expect(responseBody).toContain(
+      "The AI assistant is temporarily unavailable.",
+    );
+    expect(responseBody).not.toContain("sensitive provider details");
+  });
+
+  it.each([400, 401, 403])(
+    "does not retry Gemini client or authentication status %i",
+    async (status) => {
+      mocks.generateContent.mockRejectedValue(geminiApiError(status));
+
+      const response = await POST(chatRequest());
+
+      expect(response.status).toBe(502);
+      expect(mocks.generateContent).toHaveBeenCalledOnce();
+      expect(await response.text()).not.toContain("sensitive provider details");
+    },
+  );
+
+  it("returns Gemini 429 separately without retrying", async () => {
+    mocks.generateContent.mockRejectedValue(geminiApiError(429));
+
+    const response = await POST(chatRequest());
+
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({
+      error: {
+        code: "GEMINI_RATE_LIMITED",
+        message:
+          "The AI assistant is receiving too many requests right now. Please try again later.",
+      },
+    });
+    expect(mocks.generateContent).toHaveBeenCalledOnce();
   });
 });
