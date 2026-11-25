@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import Link from "next/link";
+import { getNextActiveOptionIndex } from "@/lib/combobox";
 import {
   isAQIReading,
   getForecastTimestampValue,
@@ -603,6 +609,7 @@ export default function Home() {
   const [dashboardDate, setDashboardDate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<IndianLocationResult[]>([]);
+  const [activeSearchOptionIndex, setActiveSearchOptionIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -610,6 +617,8 @@ export default function Home() {
   const [comparisonSearchResults, setComparisonSearchResults] = useState<
     IndianLocationResult[]
   >([]);
+  const [activeComparisonSearchOptionIndex, setActiveComparisonSearchOptionIndex] =
+    useState(-1);
   const [isComparisonSearching, setIsComparisonSearching] = useState(false);
   const [comparisonSearchError, setComparisonSearchError] = useState<string | null>(
     null,
@@ -639,9 +648,61 @@ export default function Home() {
     setIsSearching(false);
     setSearchQuery(value);
     setSearchResults([]);
+    setActiveSearchOptionIndex(-1);
     setSearchError(null);
     setShowSearchResults(false);
   }
+
+  function handleLocationSearchKeyDown(
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Escape") {
+      if (showSearchResults) {
+        event.preventDefault();
+        setShowSearchResults(false);
+        setActiveSearchOptionIndex(-1);
+      }
+      return;
+    }
+
+    const optionCount = Math.min(searchResults.length, 10);
+    if (
+      (event.key === "ArrowDown" || event.key === "ArrowUp") &&
+      optionCount > 0
+    ) {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      setActiveSearchOptionIndex((currentIndex) =>
+        getNextActiveOptionIndex(
+          showSearchResults ? currentIndex : -1,
+          optionCount,
+          direction,
+        ),
+      );
+      setShowSearchResults(true);
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      showSearchResults &&
+      activeSearchOptionIndex >= 0 &&
+      activeSearchOptionIndex < optionCount
+    ) {
+      event.preventDefault();
+      void selectLocation(searchResults[activeSearchOptionIndex]);
+    }
+  }
+
+  useEffect(() => {
+    if (!showSearchResults || searchError || activeSearchOptionIndex < 0) {
+      return;
+    }
+
+    document
+      .getElementById(`location-search-option-${activeSearchOptionIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [activeSearchOptionIndex, searchError, showSearchResults]);
 
   async function searchLocations() {
     const query = searchQuery.trim();
@@ -656,6 +717,7 @@ export default function Home() {
     setIsSearching(true);
     setSearchError(null);
     setSearchResults([]);
+    setActiveSearchOptionIndex(-1);
     setShowSearchResults(false);
 
     try {
@@ -676,10 +738,12 @@ export default function Home() {
 
       if (requestId === searchRequestIdRef.current && !controller.signal.aborted) {
         setSearchResults(payload.results.slice(0, 10));
+        setActiveSearchOptionIndex(-1);
         setShowSearchResults(true);
       }
     } catch {
       if (requestId === searchRequestIdRef.current && !controller.signal.aborted) {
+        setActiveSearchOptionIndex(-1);
         setSearchError("Could not search locations right now. Please try again.");
         setShowSearchResults(true);
       }
@@ -700,9 +764,73 @@ export default function Home() {
     setIsComparisonSearching(false);
     setComparisonQuery(value);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setComparisonSearchError(null);
     setShowComparisonSearchResults(false);
   }
+
+  function handleDashboardComparisonSearchKeyDown(
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Escape") {
+      if (showComparisonSearchResults) {
+        event.preventDefault();
+        setShowComparisonSearchResults(false);
+        setActiveComparisonSearchOptionIndex(-1);
+      }
+      return;
+    }
+
+    const optionCount = comparisonSearchResults.length;
+    if (
+      (event.key === "ArrowDown" || event.key === "ArrowUp") &&
+      optionCount > 0
+    ) {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      setActiveComparisonSearchOptionIndex((currentIndex) =>
+        getNextActiveOptionIndex(
+          showComparisonSearchResults ? currentIndex : -1,
+          optionCount,
+          direction,
+        ),
+      );
+      setShowComparisonSearchResults(true);
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      showComparisonSearchResults &&
+      activeComparisonSearchOptionIndex >= 0 &&
+      activeComparisonSearchOptionIndex < optionCount
+    ) {
+      event.preventDefault();
+      selectComparisonLocation(
+        comparisonSearchResults[activeComparisonSearchOptionIndex],
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (
+      !showComparisonSearchResults ||
+      comparisonSearchError ||
+      activeComparisonSearchOptionIndex < 0
+    ) {
+      return;
+    }
+
+    document
+      .getElementById(
+        `dashboard-comparison-option-${activeComparisonSearchOptionIndex}`,
+      )
+      ?.scrollIntoView({ block: "nearest" });
+  }, [
+    activeComparisonSearchOptionIndex,
+    comparisonSearchError,
+    showComparisonSearchResults,
+  ]);
 
   async function searchComparisonLocations() {
     const query = comparisonQuery.trim();
@@ -721,6 +849,7 @@ export default function Home() {
     setIsComparisonSearching(true);
     setComparisonSearchError(null);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setShowComparisonSearchResults(false);
 
     try {
@@ -744,10 +873,12 @@ export default function Home() {
           .filter((location) => location.id !== selectedLocation?.id)
           .slice(0, 10);
         setComparisonSearchResults(results);
+        setActiveComparisonSearchOptionIndex(-1);
         setShowComparisonSearchResults(true);
       }
     } catch {
       if (requestId === comparisonSearchRequestIdRef.current && !controller.signal.aborted) {
+        setActiveComparisonSearchOptionIndex(-1);
         setComparisonSearchError(
           "Could not search comparison cities right now. Please try again.",
         );
@@ -774,6 +905,7 @@ export default function Home() {
     setComparisonLocation(location);
     setComparisonQuery(location.name);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setComparisonSearchError(null);
     setShowComparisonSearchResults(false);
     setComparisonResult(null);
@@ -792,11 +924,13 @@ export default function Home() {
       comparisonAQIRequestIdRef.current += 1;
     }
     setSearchResults([]);
+    setActiveSearchOptionIndex(-1);
     setShowSearchResults(false);
     setSearchError(null);
     if (primaryLocationChanged) {
       setIsComparisonSearching(false);
       setComparisonSearchResults([]);
+      setActiveComparisonSearchOptionIndex(-1);
       setComparisonSearchError(null);
       setShowComparisonSearchResults(false);
       setComparisonResult(null);
@@ -1065,8 +1199,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f7faf8] text-slate-800">
       <div className="mx-auto flex min-h-screen max-w-[1600px]">
-        <main id="dashboard" className="min-w-0 flex-1">
-          <header className="border-b border-slate-100 bg-white/90 px-4 py-4 sm:px-7 lg:px-10">
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+          <header id="dashboard" className="border-b border-slate-100 bg-white/90 px-4 py-4 sm:px-7 lg:px-10">
             <div className="flex items-center justify-between gap-4">
               <div className="hidden text-sm font-semibold text-slate-500 lg:block">
                 Your personal air quality dashboard
@@ -1100,7 +1234,7 @@ export default function Home() {
           <div className="mx-auto max-w-[1320px] px-4 py-7 sm:px-7 sm:py-9 lg:px-10 lg:py-10">
             <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="mb-2 text-xs font-semibold text-slate-400">
+                <p className="mb-2 text-xs font-semibold text-slate-500">
                   {dashboardDate && (
                     <>
                       {dashboardDate} <span className="mx-1.5">·</span>
@@ -1137,7 +1271,7 @@ export default function Home() {
                 />
                 <span>{dataLabel}</span>
                 {reading && (
-                  <span className="font-medium text-slate-400">
+                  <span className="font-medium text-slate-500">
                     {reading.isDemo ? "Sample timestamp" : "Last updated"} ·{" "}
                     {formatLastUpdated(reading.lastUpdated)}
                   </span>
@@ -1167,14 +1301,38 @@ export default function Home() {
                     type="search"
                     role="combobox"
                     aria-autocomplete="list"
-                    aria-expanded={showSearchResults}
-                    aria-controls="location-search-results"
+                    aria-expanded={
+                      showSearchResults &&
+                      !searchError &&
+                      searchResults.length > 0
+                    }
+                    aria-controls={
+                      showSearchResults &&
+                      !searchError &&
+                      searchResults.length > 0
+                        ? "location-search-results"
+                        : undefined
+                    }
+                    aria-activedescendant={
+                      showSearchResults &&
+                      !searchError &&
+                      activeSearchOptionIndex >= 0 &&
+                      activeSearchOptionIndex < searchResults.length
+                        ? `location-search-option-${activeSearchOptionIndex}`
+                        : undefined
+                    }
+                    aria-busy={isSearching}
                     aria-describedby="location-search-help"
                     value={searchQuery}
                     onChange={(event) => handleSearchQueryChange(event.target.value)}
+                    onKeyDown={handleLocationSearchKeyDown}
+                    onBlur={() => {
+                      setShowSearchResults(false);
+                      setActiveSearchOptionIndex(-1);
+                    }}
                     placeholder="Search any city or district in India..."
                     maxLength={100}
-                    className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50"
+                    className="h-12 min-w-0 flex-1 rounded-xl border border-slate-500 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-500 focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                   />
                   <button
                     type="submit"
@@ -1190,14 +1348,13 @@ export default function Home() {
                     {isSearching ? "Searching..." : "Search"}
                   </button>
                 </div>
-                <p id="location-search-help" className="mt-2 text-[11px] text-slate-400">
+                <p id="location-search-help" className="mt-2 text-[11px] text-slate-500">
                   Search for a city, town, or district in India.
                 </p>
               </form>
 
               {showSearchResults && (
                 <div
-                  id="location-search-results"
                   className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
                   aria-live="polite"
                 >
@@ -1211,28 +1368,36 @@ export default function Home() {
                     </p>
                   ) : (
                     <ul
+                      id="location-search-results"
                       role="listbox"
                       aria-label="Matching Indian locations"
                       className="max-h-80 overflow-y-auto"
                     >
-                      {searchResults.slice(0, 10).map((location) => (
-                        <li key={location.id}>
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={false}
-                            onClick={() => void selectLocation(location)}
-                            className="w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-emerald-50 focus-visible:bg-emerald-50 focus-visible:outline-none"
-                          >
-                            <span className="block text-sm font-semibold text-slate-800">
-                              {location.name}
-                            </span>
-                            <span className="mt-0.5 block text-xs text-slate-500">
-                              {[location.admin1, location.admin2]
-                                .filter(Boolean)
-                                .join(" · ") || location.country}
-                            </span>
-                          </button>
+                      {searchResults.slice(0, 10).map((location, index) => (
+                        <li
+                          key={location.id}
+                          id={`location-search-option-${index}`}
+                          role="option"
+                          aria-selected={activeSearchOptionIndex === index}
+                          onMouseEnter={() =>
+                            setActiveSearchOptionIndex(index)
+                          }
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => void selectLocation(location)}
+                          className={`w-full cursor-pointer border-b border-slate-100 px-4 py-3 text-left last:border-b-0 transition-colors ${
+                            activeSearchOptionIndex === index
+                              ? "bg-emerald-50 ring-2 ring-inset ring-emerald-700"
+                              : "hover:bg-emerald-50"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold text-slate-800">
+                            {location.name}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {[location.admin1, location.admin2]
+                              .filter(Boolean)
+                              .join(" · ") || location.country}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -1264,10 +1429,10 @@ export default function Home() {
                 <div className="absolute -right-14 -top-20 size-64 rounded-full border-[34px] border-white/40" />
                 <div className="relative flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-600">
                       Current air quality
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-slate-600">
                       Air Quality Index (US AQI){reading.isDemo ? " · DEMO DATA" : ""}
                     </p>
                   </div>
@@ -1286,7 +1451,7 @@ export default function Home() {
                     <p className="text-lg font-bold text-emerald-700">
                       {airQualitySummaries[reading.category]}
                     </p>
-                    <p className="mt-1 max-w-xs text-xs leading-5 text-slate-500">
+                    <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
                       <span className="font-semibold">Health recommendation: </span>
                       {reading.healthRecommendation}
                       {reading.isDemo && " Demo guidance only; check local conditions before acting."}
@@ -1294,7 +1459,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="relative mt-7">
-                  <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                  <div className="flex justify-between text-[10px] font-medium text-slate-600">
                     <span>Good</span><span>Moderate</span><span>Unhealthy</span><span>Hazardous</span>
                   </div>
                   <div className="relative mt-2 h-2 overflow-visible rounded-full bg-gradient-to-r from-emerald-400 via-yellow-300 to-rose-400">
@@ -1303,7 +1468,7 @@ export default function Home() {
                       style={{ left: `${Math.min(reading.aqi, 200) / 2}%` }}
                     />
                   </div>
-                  <div className="mt-2 flex justify-between text-[9px] text-slate-400">
+                  <div className="mt-2 flex justify-between text-[9px] text-slate-600">
                     <span>0</span><span>50</span><span>100</span><span>150</span><span>200+</span>
                   </div>
                 </div>
@@ -1318,15 +1483,15 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs font-bold text-slate-700">PM2.5</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
+                      <p className="mt-1 text-[11px] text-slate-500">
                         {reading.isDemo ? "DEMO DATA · " : ""}Fine particles
                       </p>
                     </div>
-                    <span className="flex size-9 items-center justify-center rounded-xl bg-sky-50 text-sm font-bold text-sky-600">2.5</span>
+                    <span className="flex size-9 items-center justify-center rounded-xl bg-sky-50 text-sm font-bold text-sky-700">2.5</span>
                   </div>
                   <div className="mt-4 flex items-baseline gap-2">
                     <span className="text-[32px] font-semibold tracking-tight text-slate-900">{pm25Reading?.value ?? "—"}</span>
-                    <span className="text-xs text-slate-400">{pm25Reading?.unit ?? ""}</span>
+                    <span className="text-xs text-slate-500">{pm25Reading?.unit ?? ""}</span>
                     <span className="ml-auto rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
                       {pm25Reading ? (reading.isDemo ? "Sample" : "Available") : "Unavailable"}
                     </span>
@@ -1337,16 +1502,16 @@ export default function Home() {
                       style={{ width: getPollutantBarWidth(pm25Reading) }}
                     />
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-400">
+                  <p className="mt-2 text-[10px] text-slate-500">
                     {getPollutantBarScaleLabel(pm25Reading)}
                   </p>
                   <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400">NO2</p>
+                      <p className="text-[10px] font-semibold text-slate-500">NO2</p>
                       <p className="mt-1 text-xs font-bold text-slate-700">{formatPollutant(no2Reading)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400">O3</p>
+                      <p className="text-[10px] font-semibold text-slate-500">O3</p>
                       <p className="mt-1 text-xs font-bold text-slate-700">{formatPollutant(ozoneReading)}</p>
                     </div>
                   </div>
@@ -1356,7 +1521,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs font-bold text-slate-700">PM10</p>
-                      <p className="mt-1 text-[11px] text-slate-400">
+                      <p className="mt-1 text-[11px] text-slate-500">
                         {reading.isDemo ? "DEMO DATA · " : ""}Coarse particles
                       </p>
                     </div>
@@ -1364,7 +1529,7 @@ export default function Home() {
                   </div>
                   <div className="mt-4 flex items-baseline gap-2">
                     <span className="text-[32px] font-semibold tracking-tight text-slate-900">{pm10Reading?.value ?? "—"}</span>
-                    <span className="text-xs text-slate-400">{pm10Reading?.unit ?? ""}</span>
+                    <span className="text-xs text-slate-500">{pm10Reading?.unit ?? ""}</span>
                     <span className="ml-auto rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
                       {pm10Reading ? (reading.isDemo ? "Sample" : "Available") : "Unavailable"}
                     </span>
@@ -1375,16 +1540,16 @@ export default function Home() {
                       style={{ width: getPollutantBarWidth(pm10Reading) }}
                     />
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-400">
+                  <p className="mt-2 text-[10px] text-slate-500">
                     {getPollutantBarScaleLabel(pm10Reading)}
                   </p>
                   <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400">CO</p>
+                      <p className="text-[10px] font-semibold text-slate-500">CO</p>
                       <p className="mt-1 text-xs font-bold text-slate-700">{formatPollutant(coReading)}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-400">SO2</p>
+                      <p className="text-[10px] font-semibold text-slate-500">SO2</p>
                       <p className="mt-1 text-xs font-bold text-slate-700">{formatPollutant(so2Reading)}</p>
                     </div>
                   </div>
@@ -1473,7 +1638,7 @@ export default function Home() {
                         >
                           {healthAlertPresentation[healthAlertSeverity].label} alert
                         </span>
-                        <span className="text-[11px] font-medium text-slate-500">
+                        <span className="text-[11px] font-medium text-slate-600">
                           {healthAlertReading.city}
                         </span>
                       </div>
@@ -1490,7 +1655,7 @@ export default function Home() {
 
                     <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                           Current AQI
                         </p>
                         <p className="text-2xl font-bold tracking-tight text-slate-900">
@@ -1593,16 +1758,41 @@ export default function Home() {
                     type="search"
                     role="combobox"
                     aria-autocomplete="list"
-                    aria-expanded={showComparisonSearchResults}
-                    aria-controls="comparison-location-results"
+                    aria-expanded={
+                      showComparisonSearchResults &&
+                      !comparisonSearchError &&
+                      comparisonSearchResults.length > 0
+                    }
+                    aria-controls={
+                      showComparisonSearchResults &&
+                      !comparisonSearchError &&
+                      comparisonSearchResults.length > 0
+                        ? "comparison-location-results"
+                        : undefined
+                    }
+                    aria-activedescendant={
+                      showComparisonSearchResults &&
+                      !comparisonSearchError &&
+                      activeComparisonSearchOptionIndex >= 0 &&
+                      activeComparisonSearchOptionIndex <
+                        comparisonSearchResults.length
+                        ? `dashboard-comparison-option-${activeComparisonSearchOptionIndex}`
+                        : undefined
+                    }
+                    aria-busy={isComparisonSearching}
                     aria-describedby="comparison-location-help"
                     value={comparisonQuery}
                     onChange={(event) =>
                       handleComparisonQueryChange(event.target.value)
                     }
+                    onKeyDown={handleDashboardComparisonSearchKeyDown}
+                    onBlur={() => {
+                      setShowComparisonSearchResults(false);
+                      setActiveComparisonSearchOptionIndex(-1);
+                    }}
                     placeholder="Search a city or district..."
                     maxLength={100}
-                    className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50"
+                    className="h-12 min-w-0 flex-1 rounded-xl border border-slate-500 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-500 focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                   />
                   <button
                     type="submit"
@@ -1622,7 +1812,7 @@ export default function Home() {
                 </div>
                 <p
                   id="comparison-location-help"
-                  className="mt-2 text-[11px] text-slate-400"
+                  className="mt-2 text-[11px] text-slate-500"
                 >
                   The selected city remains the first city in the comparison.
                 </p>
@@ -1630,7 +1820,6 @@ export default function Home() {
 
               {showComparisonSearchResults && (
                 <div
-                  id="comparison-location-results"
                   className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
                   aria-live="polite"
                 >
@@ -1644,28 +1833,38 @@ export default function Home() {
                     </p>
                   ) : (
                     <ul
+                      id="comparison-location-results"
                       role="listbox"
                       aria-label="Matching comparison cities"
                       className="max-h-80 overflow-y-auto"
                     >
-                      {comparisonSearchResults.map((location) => (
-                        <li key={location.id}>
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={comparisonLocation?.id === location.id}
-                            onClick={() => selectComparisonLocation(location)}
-                            className="w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-emerald-50 focus-visible:bg-emerald-50 focus-visible:outline-none"
-                          >
-                            <span className="block text-sm font-semibold text-slate-800">
-                              {location.name}
-                            </span>
-                            <span className="mt-0.5 block text-xs text-slate-500">
-                              {[location.admin1, location.admin2]
-                                .filter(Boolean)
-                                .join(" · ") || location.country}
-                            </span>
-                          </button>
+                      {comparisonSearchResults.map((location, index) => (
+                        <li
+                          key={location.id}
+                          id={`dashboard-comparison-option-${index}`}
+                          role="option"
+                          aria-selected={
+                            activeComparisonSearchOptionIndex === index
+                          }
+                          onMouseEnter={() =>
+                            setActiveComparisonSearchOptionIndex(index)
+                          }
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => selectComparisonLocation(location)}
+                          className={`w-full cursor-pointer border-b border-slate-100 px-4 py-3 text-left last:border-b-0 transition-colors ${
+                            activeComparisonSearchOptionIndex === index
+                              ? "bg-emerald-50 ring-2 ring-inset ring-emerald-700"
+                              : "hover:bg-emerald-50"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold text-slate-800">
+                            {location.name}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {[location.admin1, location.admin2]
+                              .filter(Boolean)
+                              .join(" · ") || location.country}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -1769,7 +1968,7 @@ export default function Home() {
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                                 {city.label}
                               </p>
                               <h3 className="mt-1 text-base font-bold text-slate-900">
@@ -1790,7 +1989,7 @@ export default function Home() {
 
                           <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
                             <div>
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                                 Current AQI
                               </p>
                               <p className="text-4xl font-bold tracking-tight text-slate-900">
@@ -1827,7 +2026,7 @@ export default function Home() {
 
                           <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3">
                             <div>
-                              <dt className="text-[10px] font-semibold text-slate-400">
+                              <dt className="text-[10px] font-semibold text-slate-500">
                                 PM2.5
                               </dt>
                               <dd className="mt-1 text-xs font-bold text-slate-700">
@@ -1837,7 +2036,7 @@ export default function Home() {
                               </dd>
                             </div>
                             <div>
-                              <dt className="text-[10px] font-semibold text-slate-400">
+                              <dt className="text-[10px] font-semibold text-slate-500">
                                 PM10
                               </dt>
                               <dd className="mt-1 text-xs font-bold text-slate-700">
@@ -1861,7 +2060,7 @@ export default function Home() {
                       ? "Both cities currently have the same AQI."
                       : `${comparisonWinner === "primary" ? selectedLocation.name : comparisonLocation.name} currently has better air quality based on its lower AQI.`}
                   </p>
-                  <p className="mt-2 text-[10px] text-slate-400">
+                  <p className="mt-2 text-[10px] text-slate-500">
                     The AQI bars use a 0–500 scale. Lower AQI indicates better air quality.
                   </p>
                 </div>
@@ -1901,7 +2100,7 @@ export default function Home() {
                         : "Restoring the saved location..."}
                   </p>
                 </div>
-                <p className="max-w-xs text-[11px] leading-5 text-slate-400">
+                <p className="max-w-xs text-[11px] leading-5 text-slate-500">
                   {currentForecast?.dataSource ??
                     "Open-Meteo/CAMS model-based estimates, not verified ground-station measurements."}
                 </p>
@@ -1968,7 +2167,7 @@ export default function Home() {
                       <>
                         <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                           <div className="rounded-xl border border-slate-100 bg-white/90 p-3">
-                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Overall AQI trend
                             </dt>
                             <dd className="mt-2">
@@ -2013,7 +2212,7 @@ export default function Home() {
                           </div>
 
                           <div className="rounded-xl border border-slate-100 bg-white/90 p-3">
-                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Cleanest day · daily average
                             </dt>
                             <dd className="mt-2">
@@ -2041,7 +2240,7 @@ export default function Home() {
                           </div>
 
                           <div className="rounded-xl border border-slate-100 bg-white/90 p-3">
-                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Most polluted day · daily average
                             </dt>
                             <dd className="mt-2">
@@ -2072,7 +2271,7 @@ export default function Home() {
                           </div>
 
                           <div className="rounded-xl border border-slate-100 bg-white/90 p-3">
-                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                            <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                               Highest predicted AQI
                             </dt>
                             <dd className="mt-2">
@@ -2110,7 +2309,7 @@ export default function Home() {
                             {getAQIForecastRecommendation(forecastInsights)}
                           </p>
                         </div>
-                        <p className="mt-2 text-[10px] leading-4 text-slate-400">
+                        <p className="mt-2 text-[10px] leading-4 text-slate-500">
                           Trend compares the first and last available daily averages;
                           changes of 5 AQI points or less are treated as relatively stable.
                         </p>
@@ -2131,7 +2330,7 @@ export default function Home() {
                       <h3 className="text-xs font-bold text-slate-700">
                         AQI trend · Model-based estimates
                       </h3>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-[10px] text-slate-500">
                         US AQI · {currentForecast.points.length} returned points
                       </span>
                     </div>
@@ -2156,7 +2355,8 @@ export default function Home() {
                               x2={FORECAST_CHART_SIZE.width - FORECAST_CHART_SIZE.right}
                               y1={tick.y}
                               y2={tick.y}
-                              stroke="#e2e8f0"
+                              stroke="#64748b"
+                              strokeOpacity="0.8"
                               strokeDasharray="4 5"
                             />
                             <text
@@ -2164,7 +2364,7 @@ export default function Home() {
                               y={tick.y}
                               textAnchor="end"
                               dominantBaseline="middle"
-                              fill="#94a3b8"
+                              fill="#64748b"
                               fontSize="11"
                             >
                               {tick.value}
@@ -2231,12 +2431,12 @@ export default function Home() {
                         <h3 className="text-xs font-bold text-slate-700">
                           Daily summaries and hourly details
                         </h3>
-                        <p className="mt-1 text-[10px] text-slate-400">
+                        <p className="mt-1 text-[10px] text-slate-500">
                           Local API timestamps · {currentForecast.timezone}
                         </p>
                       </div>
                       {currentForecast.generatedAt && (
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-[10px] text-slate-500">
                           Source generated · {currentForecast.generatedAt}
                         </p>
                       )}
@@ -2268,7 +2468,7 @@ export default function Home() {
                                     <h4 className="text-sm font-bold text-slate-800">
                                       {formattedDate}
                                     </h4>
-                                    <p className="mt-1 text-[11px] text-slate-400">
+                                    <p className="mt-1 text-[11px] text-slate-500">
                                       {day.points.length} hourly{" "}
                                       {day.points.length === 1 ? "reading" : "readings"}
                                     </p>
@@ -2301,7 +2501,7 @@ export default function Home() {
 
                                 <dl className="mt-4 grid gap-3 sm:grid-cols-2">
                                   <div className="rounded-xl border border-slate-100 bg-white p-3">
-                                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                                       Average AQI
                                     </dt>
                                     <dd className="mt-2 flex flex-wrap items-center gap-2">
@@ -2320,7 +2520,7 @@ export default function Home() {
                                     </dd>
                                   </div>
                                   <div className="rounded-xl border border-slate-100 bg-white p-3">
-                                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                                       Maximum AQI
                                     </dt>
                                     <dd className="mt-2 flex flex-wrap items-center gap-2">
@@ -2364,7 +2564,7 @@ export default function Home() {
                                         className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-[#fbfcfb] p-3 sm:grid-cols-4 sm:items-center"
                                       >
                                         <div>
-                                          <span className="block text-[10px] font-medium text-slate-400">
+                                          <span className="block text-[10px] font-medium text-slate-500">
                                             Local time
                                           </span>
                                           <time
@@ -2375,7 +2575,7 @@ export default function Home() {
                                           </time>
                                         </div>
                                         <div>
-                                          <span className="block text-[10px] font-medium text-slate-400">
+                                          <span className="block text-[10px] font-medium text-slate-500">
                                             AQI
                                           </span>
                                           <span className="text-sm font-bold text-emerald-800">
@@ -2385,7 +2585,7 @@ export default function Home() {
                                           </span>
                                         </div>
                                         <div>
-                                          <span className="block text-[10px] font-medium text-slate-400">
+                                          <span className="block text-[10px] font-medium text-slate-500">
                                             PM2.5 · µg/m³
                                           </span>
                                           <span className="text-xs font-semibold text-slate-700">
@@ -2395,7 +2595,7 @@ export default function Home() {
                                           </span>
                                         </div>
                                         <div>
-                                          <span className="block text-[10px] font-medium text-slate-400">
+                                          <span className="block text-[10px] font-medium text-slate-500">
                                             PM10 · µg/m³
                                           </span>
                                           <span className="text-xs font-semibold text-slate-700">
@@ -2424,7 +2624,7 @@ export default function Home() {
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <div id="assistant" className="mb-2 flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-sm text-emerald-700">✳</span>
+                      <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-sm text-emerald-700">✳</span>
                       <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
                         {reading
                           ? reading.isDemo
@@ -2447,7 +2647,7 @@ export default function Home() {
                         DEMO DATA · These recommendations are demo-based.
                       </p>
                     ) : reading ? (
-                      <p className="mt-1 text-[11px] text-slate-400">
+                      <p className="mt-1 text-[11px] text-slate-500">
                         Based on model-based Open-Meteo data, not verified ground-station
                         measurements.
                       </p>
@@ -2533,7 +2733,7 @@ export default function Home() {
               </article>
             </section>
 
-            <footer className="mt-7 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/70 pt-4 text-[10px] text-slate-400">
+            <footer className="mt-7 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/70 pt-4 text-[10px] text-slate-500">
               <span>
                 {!reading
                   ? "AQI data is unavailable for the selected location; recommendations are not shown."

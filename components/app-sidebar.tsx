@@ -106,10 +106,16 @@ function NavigationLinks({
             onClick={onNavigate}
             className={`flex items-center gap-3 rounded-xl px-3 py-3 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
               isActive
-                ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                ? "relative bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
             }`}
           >
+            {isActive && (
+              <span
+                aria-hidden="true"
+                className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-700 dark:bg-emerald-300"
+              />
+            )}
             <SidebarIcon name={item.icon} />
             <span>{item.label}</span>
           </Link>
@@ -138,22 +144,28 @@ export default function AppSidebar() {
 
   return (
     <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-emerald-700 focus:px-4 focus:py-3 focus:font-semibold focus:text-white focus:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:focus:bg-emerald-300 dark:focus:text-slate-900 dark:focus-visible:outline-emerald-400"
+      >
+        Skip to main content
+      </a>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col overflow-y-auto border-r border-slate-100 bg-white px-5 py-7 dark:border-slate-800 dark:bg-slate-900 lg:flex">
         <Link href="/dashboard" className="mb-9 flex items-center gap-3 px-2">
-          <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-sm shadow-emerald-200">
+          <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-sm shadow-emerald-200">
             ✳
           </span>
           <span>
             <span className="block text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
-              SmogShield <span className="text-emerald-600">AI</span>
+              SmogShield <span className="text-emerald-700 dark:text-emerald-600">AI</span>
             </span>
-            <span className="mt-0.5 block text-[11px] font-medium text-slate-400">
+            <span className="mt-0.5 block text-[11px] font-medium text-slate-500 dark:text-slate-400">
               Breathe a little easier
             </span>
           </span>
         </Link>
 
-        <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+        <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
           Workspace
         </p>
         <NavigationLinks pathname={pathname} label="Main navigation" />
@@ -184,13 +196,13 @@ export default function AppSidebar() {
         <div
           className="mt-auto rounded-2xl bg-gradient-to-br from-emerald-50 to-sky-50 p-4 dark:from-slate-800 dark:to-slate-800"
         >
-          <div className="mb-3 flex size-9 items-center justify-center rounded-xl bg-white text-lg text-emerald-600 shadow-sm dark:bg-slate-700">
+          <div aria-hidden="true" className="mb-3 flex size-9 items-center justify-center rounded-xl bg-white text-lg text-emerald-600 shadow-sm dark:bg-slate-700">
             ✧
           </div>
           <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
             A healthier day starts here
           </p>
-          <p className="mt-1.5 text-xs leading-5 text-slate-500 dark:text-slate-300">
+          <p className="mt-1.5 text-xs leading-5 text-slate-600 dark:text-slate-300">
             Small, informed choices can make a big difference to the air you breathe.
           </p>
           <Link
@@ -209,7 +221,7 @@ export default function AppSidebar() {
             <span className="block truncate text-xs font-bold text-slate-800 dark:text-slate-100">
               Personal account
             </span>
-            <span className="mt-0.5 block text-[11px] text-slate-400">
+            <span className="mt-0.5 block text-[11px] text-slate-500 dark:text-slate-400">
               Personal account
             </span>
           </span>
@@ -221,11 +233,11 @@ export default function AppSidebar() {
 
       <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-slate-100 bg-white/95 px-4 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 lg:hidden">
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-lg text-white">
+          <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-lg text-white">
             ✳
           </span>
           <span className="truncate text-sm font-bold tracking-tight text-slate-900 dark:text-white">
-            SmogShield <span className="text-emerald-600">AI</span>
+            SmogShield <span className="text-emerald-700 dark:text-emerald-600">AI</span>
           </span>
         </Link>
         <button

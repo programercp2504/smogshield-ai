@@ -267,7 +267,7 @@ export default function InsightsPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
       <div className="mx-auto max-w-[1400px]">
         <header className="mb-6 rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
@@ -357,7 +357,7 @@ export default function InsightsPage() {
                 >
                   AQI Forecast Insights
                 </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                   Based on {currentForecast.locationName}&apos;s valid forecast
                   points in {currentForecast.timezone}.
                 </p>
@@ -479,7 +479,7 @@ export default function InsightsPage() {
                     </span>
                     {getAQIForecastRecommendation(insights, currentForecast.timezone)}
                   </p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-[11px] leading-5 text-slate-600 dark:text-slate-400">
                     Trend compares the first and last available daily averages;
                     changes of 5 AQI points or less are treated as stable.
                   </p>

@@ -179,24 +179,34 @@ function getFollowUpSuggestions(
 
 const assistantMarkdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="mb-2 mt-5 text-2xl font-bold tracking-tight text-slate-900 first:mt-0 dark:text-white">
-      {children}
-    </h1>
-  ),
-  h2: ({ children }) => (
-    <h2 className="mb-2 mt-5 text-xl font-bold tracking-tight text-slate-900 first:mt-0 dark:text-white">
+    <h2 className="mb-2 mt-5 text-2xl font-bold tracking-tight text-slate-900 first:mt-0 dark:text-white">
       {children}
     </h2>
   ),
-  h3: ({ children }) => (
-    <h3 className="mb-2 mt-4 text-lg font-bold text-emerald-800 first:mt-0 dark:text-emerald-300">
+  h2: ({ children }) => (
+    <h3 className="mb-2 mt-5 text-xl font-bold tracking-tight text-slate-900 first:mt-0 dark:text-white">
       {children}
     </h3>
   ),
-  h4: ({ children }) => (
-    <h4 className="mb-1.5 mt-4 text-base font-semibold text-emerald-800 first:mt-0 dark:text-emerald-300">
+  h3: ({ children }) => (
+    <h4 className="mb-2 mt-4 text-lg font-bold text-emerald-800 first:mt-0 dark:text-emerald-300">
       {children}
     </h4>
+  ),
+  h4: ({ children }) => (
+    <h5 className="mb-1.5 mt-4 text-base font-semibold text-emerald-800 first:mt-0 dark:text-emerald-300">
+      {children}
+    </h5>
+  ),
+  h5: ({ children }) => (
+    <h6 className="mb-1.5 mt-3 text-sm font-semibold text-emerald-800 first:mt-0 dark:text-emerald-300">
+      {children}
+    </h6>
+  ),
+  h6: ({ children }) => (
+    <h6 className="mb-1 mt-3 text-xs font-semibold text-emerald-800 first:mt-0 dark:text-emerald-300">
+      {children}
+    </h6>
   ),
   p: ({ children }) => (
     <p className="mb-3 break-words text-sm leading-6 last:mb-0">{children}</p>
@@ -390,11 +400,11 @@ export default function AssistantPage() {
             href="/"
             className="flex items-center gap-3 focus-visible:rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:focus-visible:outline-emerald-400"
           >
-            <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-sm shadow-emerald-200">
+            <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-sm shadow-emerald-200">
               ✳
             </span>
             <span className="text-[15px] font-bold tracking-tight text-slate-900 dark:text-white">
-              SmogShield <span className="text-emerald-600">AI</span>
+              SmogShield <span className="text-emerald-700 dark:text-emerald-600">AI</span>
             </span>
           </Link>
           <Link
@@ -407,7 +417,7 @@ export default function AssistantPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-7 sm:py-12 lg:px-10">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-4xl px-4 py-8 sm:px-7 sm:py-12 lg:px-10">
         <div className="mb-6">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-slate-900 dark:text-emerald-200">
             <span className="size-1.5 rounded-full bg-emerald-500" />
@@ -438,14 +448,14 @@ export default function AssistantPage() {
         >
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-lg text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+              <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-2xl bg-emerald-50 text-lg text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
                 ✳
               </span>
               <div>
                 <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                   SmogShield assistant
                 </h2>
-                <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-400">
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
                   Air quality guidance
                 </p>
               </div>
@@ -522,7 +532,7 @@ export default function AssistantPage() {
                           role="group"
                           aria-label="Suggested follow-up questions"
                         >
-                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-400">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400">
                             Continue the conversation
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -571,7 +581,7 @@ export default function AssistantPage() {
             )}
 
             <div className="mt-8">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-400 dark:text-slate-400">
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.13em] text-slate-500 dark:text-slate-400">
                 Try asking
               </p>
               <div className="grid gap-2.5 sm:grid-cols-2">
@@ -605,7 +615,7 @@ export default function AssistantPage() {
             <label htmlFor="assistant-message" className="sr-only">
               Your message
             </label>
-            <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-emerald-300 focus-within:ring-4 focus-within:ring-emerald-50 dark:border-slate-700 dark:bg-slate-800 dark:focus-within:border-emerald-500 dark:focus-within:ring-emerald-950/60">
+            <div className="flex items-end gap-2 rounded-2xl border border-slate-500 bg-white p-2 shadow-sm focus-within:border-emerald-700 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-emerald-600 focus-within:ring-4 focus-within:ring-emerald-50 dark:border-slate-400 dark:bg-slate-800 dark:focus-within:border-emerald-500 dark:focus-within:outline-emerald-400 dark:focus-within:ring-emerald-950/60">
               <textarea
                 id="assistant-message"
                 rows={1}
@@ -623,7 +633,7 @@ export default function AssistantPage() {
                 }}
                 maxLength={MAX_MESSAGE_LENGTH}
                 placeholder="Ask a question about air quality..."
-                className="max-h-32 min-h-10 flex-1 resize-y bg-transparent px-2 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-400"
+                className="max-h-32 min-h-10 flex-1 resize-y bg-transparent px-2 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-500 dark:text-slate-100 dark:placeholder:text-slate-400"
               />
               <button
                 type="submit"
@@ -637,13 +647,13 @@ export default function AssistantPage() {
                 </span>
               </button>
             </div>
-            <p className="mt-2 px-1 text-[10px] font-medium text-slate-400 dark:text-slate-400">
+            <p className="mt-2 px-1 text-[10px] font-medium text-slate-500 dark:text-slate-400">
               Press Enter to send · Shift + Enter for a new line.
             </p>
           </form>
         </section>
 
-        <p className="mt-5 text-center text-[11px] leading-5 text-slate-400 dark:text-slate-400">
+        <p className="mt-5 text-center text-[11px] leading-5 text-slate-500 dark:text-slate-400">
           Information provided by AI is for general informational purposes only and is not a
           substitute for professional medical advice.
         </p>

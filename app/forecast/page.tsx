@@ -324,7 +324,7 @@ export default function ForecastPage() {
   ].filter((index) => index >= 0);
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
       <div className="mx-auto max-w-[1400px]">
         <header className="mb-6 rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
@@ -409,7 +409,7 @@ export default function ForecastPage() {
                 >
                   AI Forecast Insights
                 </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                   Calculated from {currentForecast.locationName}&apos;s valid
                   forecast points in {currentForecast.timezone}.
                 </p>
@@ -516,7 +516,7 @@ export default function ForecastPage() {
                     </span>
                     {getRecommendation(insights)}
                   </p>
-                  <p className="mt-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-[11px] leading-5 text-slate-600 dark:text-slate-400">
                     Trend compares the first and last available daily averages;
                     changes of 5 AQI points or less are treated as relatively stable.
                   </p>
@@ -571,21 +571,22 @@ export default function ForecastPage() {
                     {chartTicks.map((tick, index) => (
                       <g key={`tick-${index}`}>
                         <line
+                          className="text-slate-500 dark:text-slate-400"
                           x1={CHART.left}
                           x2={CHART.width - CHART.right}
                           y1={tick.y}
                           y2={tick.y}
                           stroke="currentColor"
-                          strokeOpacity="0.12"
+                          strokeOpacity="0.8"
                           strokeDasharray="4 5"
                         />
                         <text
+                          className="text-slate-500 dark:text-slate-400"
                           x={CHART.left - 10}
                           y={tick.y}
                           textAnchor="end"
                           dominantBaseline="middle"
                           fill="currentColor"
-                          fillOpacity="0.55"
                           fontSize="11"
                         >
                           {tick.value}
@@ -629,11 +630,11 @@ export default function ForecastPage() {
                       return (
                         <text
                           key={`date-${index}`}
+                          className="text-slate-500 dark:text-slate-400"
                           x={chartPoint?.x ?? CHART.left}
                           y={CHART.height - 8}
                           textAnchor={anchor}
                           fill="currentColor"
-                          fillOpacity="0.65"
                           fontSize="10"
                         >
                           {chartPoint?.point.time.slice(0, 10)}

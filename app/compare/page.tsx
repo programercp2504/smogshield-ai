@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
+import { getNextActiveOptionIndex } from "@/lib/combobox";
 import {
   isAQIReading,
   isIndianLocationResult,
@@ -107,6 +113,8 @@ export default function ComparePage() {
   const [comparisonSearchResults, setComparisonSearchResults] = useState<
     IndianLocationResult[]
   >([]);
+  const [activeComparisonSearchOptionIndex, setActiveComparisonSearchOptionIndex] =
+    useState(-1);
   const [isComparisonSearching, setIsComparisonSearching] = useState(false);
   const [comparisonSearchError, setComparisonSearchError] = useState<
     string | null
@@ -174,9 +182,71 @@ export default function ComparePage() {
     setIsComparisonSearching(false);
     setComparisonQuery(value);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setComparisonSearchError(null);
     setShowComparisonSearchResults(false);
   }
+
+  function handleComparisonSearchKeyDown(
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Escape") {
+      if (showComparisonSearchResults) {
+        event.preventDefault();
+        setShowComparisonSearchResults(false);
+        setActiveComparisonSearchOptionIndex(-1);
+      }
+      return;
+    }
+
+    const optionCount = comparisonSearchResults.length;
+    if (
+      (event.key === "ArrowDown" || event.key === "ArrowUp") &&
+      optionCount > 0
+    ) {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      setActiveComparisonSearchOptionIndex((currentIndex) =>
+        getNextActiveOptionIndex(
+          showComparisonSearchResults ? currentIndex : -1,
+          optionCount,
+          direction,
+        ),
+      );
+      setShowComparisonSearchResults(true);
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      showComparisonSearchResults &&
+      activeComparisonSearchOptionIndex >= 0 &&
+      activeComparisonSearchOptionIndex < optionCount
+    ) {
+      event.preventDefault();
+      selectComparisonLocation(
+        comparisonSearchResults[activeComparisonSearchOptionIndex],
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (
+      !showComparisonSearchResults ||
+      comparisonSearchError ||
+      activeComparisonSearchOptionIndex < 0
+    ) {
+      return;
+    }
+
+    document
+      .getElementById(`compare-location-option-${activeComparisonSearchOptionIndex}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [
+    activeComparisonSearchOptionIndex,
+    comparisonSearchError,
+    showComparisonSearchResults,
+  ]);
 
   async function searchComparisonLocations() {
     const query = comparisonQuery.trim();
@@ -195,6 +265,7 @@ export default function ComparePage() {
     setIsComparisonSearching(true);
     setComparisonSearchError(null);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setShowComparisonSearchResults(false);
 
     try {
@@ -221,6 +292,7 @@ export default function ComparePage() {
           .filter((location) => location.id !== selectedLocation?.id)
           .slice(0, 10);
         setComparisonSearchResults(results);
+        setActiveComparisonSearchOptionIndex(-1);
         setShowComparisonSearchResults(true);
       }
     } catch {
@@ -228,6 +300,7 @@ export default function ComparePage() {
         requestId === comparisonSearchRequestIdRef.current &&
         !controller.signal.aborted
       ) {
+        setActiveComparisonSearchOptionIndex(-1);
         setComparisonSearchError(
           "Could not search comparison cities right now. Please try again.",
         );
@@ -254,6 +327,7 @@ export default function ComparePage() {
     setComparisonLocation(location);
     setComparisonQuery(location.name);
     setComparisonSearchResults([]);
+    setActiveComparisonSearchOptionIndex(-1);
     setComparisonSearchError(null);
     setShowComparisonSearchResults(false);
     setComparisonResult(null);
@@ -406,7 +480,7 @@ export default function ComparePage() {
       : [];
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
+    <main id="main-content" tabIndex={-1} className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-800 dark:bg-slate-950 dark:text-slate-100 sm:px-7 sm:py-8 lg:px-10">
       <div className="mx-auto max-w-[1400px]">
         <header className="mb-6 rounded-[26px] border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
@@ -478,16 +552,41 @@ export default function ComparePage() {
                 type="search"
                 role="combobox"
                 aria-autocomplete="list"
-                aria-expanded={showComparisonSearchResults}
-                aria-controls="comparison-location-results"
+                aria-expanded={
+                  showComparisonSearchResults &&
+                  !comparisonSearchError &&
+                  comparisonSearchResults.length > 0
+                }
+                aria-controls={
+                  showComparisonSearchResults &&
+                  !comparisonSearchError &&
+                  comparisonSearchResults.length > 0
+                    ? "comparison-location-results"
+                    : undefined
+                }
+                aria-activedescendant={
+                  showComparisonSearchResults &&
+                  !comparisonSearchError &&
+                  activeComparisonSearchOptionIndex >= 0 &&
+                  activeComparisonSearchOptionIndex <
+                    comparisonSearchResults.length
+                    ? `compare-location-option-${activeComparisonSearchOptionIndex}`
+                    : undefined
+                }
+                aria-busy={isComparisonSearching}
                 aria-describedby="comparison-location-help"
                 value={comparisonQuery}
                 onChange={(event) =>
                   handleComparisonQueryChange(event.target.value)
                 }
+                onKeyDown={handleComparisonSearchKeyDown}
+                onBlur={() => {
+                  setShowComparisonSearchResults(false);
+                  setActiveComparisonSearchOptionIndex(-1);
+                }}
                 placeholder="Search a city or district..."
                 maxLength={100}
-                className="h-12 min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-4 focus:ring-emerald-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:bg-slate-800 dark:focus:ring-emerald-950/60"
+                className="h-12 min-w-0 flex-1 rounded-xl border border-slate-500 bg-slate-50 px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-500 focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 dark:border-slate-400 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400 dark:focus:border-emerald-400 dark:focus:bg-slate-800 dark:focus:ring-emerald-950/60 dark:focus-visible:outline-emerald-400"
               />
               <button
                 type="submit"
@@ -518,7 +617,6 @@ export default function ComparePage() {
 
           {showComparisonSearchResults && (
             <div
-              id="comparison-location-results"
               className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
               aria-live="polite"
             >
@@ -543,26 +641,36 @@ export default function ComparePage() {
                 </p>
               ) : (
                 <ul
+                  id="comparison-location-results"
                   role="listbox"
                   aria-label="Matching comparison cities"
                   className="max-h-80 overflow-y-auto"
                 >
-                  {comparisonSearchResults.map((location) => (
-                    <li key={location.id}>
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={comparisonLocation?.id === location.id}
-                        onClick={() => selectComparisonLocation(location)}
-                        className="w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-emerald-50 focus-visible:bg-emerald-50 focus-visible:outline-none dark:border-slate-800 dark:hover:bg-slate-800 dark:focus-visible:bg-slate-800"
-                      >
-                        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {location.name}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
-                          {getLocationSubtitle(location)}
-                        </span>
-                      </button>
+                  {comparisonSearchResults.map((location, index) => (
+                    <li
+                      key={location.id}
+                      id={`compare-location-option-${index}`}
+                      role="option"
+                      aria-selected={
+                        activeComparisonSearchOptionIndex === index
+                      }
+                      onMouseEnter={() =>
+                        setActiveComparisonSearchOptionIndex(index)
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => selectComparisonLocation(location)}
+                      className={`w-full cursor-pointer border-b border-slate-100 px-4 py-3 text-left last:border-b-0 transition-colors dark:border-slate-800 ${
+                        activeComparisonSearchOptionIndex === index
+                          ? "bg-emerald-50 ring-2 ring-inset ring-emerald-700 dark:bg-slate-800 dark:ring-emerald-400"
+                          : "hover:bg-emerald-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {location.name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                        {getLocationSubtitle(location)}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -729,11 +837,11 @@ export default function ComparePage() {
                         aria-valuemin={0}
                         aria-valuemax={500}
                         aria-valuenow={city.reading.aqi}
-                        className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                        className="mt-4 h-2 overflow-hidden rounded-full border border-slate-500 bg-slate-100 dark:border-slate-500 dark:bg-slate-700"
                       >
                         <span
                           aria-hidden="true"
-                          className="block h-full rounded-full bg-emerald-600 transition-[width]"
+                          className="block h-full rounded-full bg-emerald-600 transition-[width] dark:bg-emerald-400"
                           style={{
                             width: `${Math.min((city.reading.aqi / 500) * 100, 100)}%`,
                           }}
